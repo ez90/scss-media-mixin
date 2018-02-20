@@ -7,9 +7,9 @@
   "files": [
     "media.scss"
   ],
+  "repository": "ez90/scss-media-mixin",
+  "homepage": "https://github.com/ez90/scss-media-mixin",
   "devDependencies": {},
   "scripts": {},
-  "repository": "",
   "license": "MIT"
-}
 }
