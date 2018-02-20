@@ -3,6 +3,7 @@
 // Strongly inspired by of https://include-media.com/
 // -----------------------------------------------------------------------------
 
+// List of breakpoints
 $breakpoints: (
         'xs': 480px,
         'sm': 768px,
@@ -10,6 +11,7 @@ $breakpoints: (
         'lg': 1200px
 ) !default;
 
+// List of media expressions
 $media-expressions: (
         'screen': 'screen',
         'print': 'print',
@@ -20,6 +22,15 @@ $media-expressions: (
         'retina3x': '(-webkit-min-device-pixel-ratio: 3), (min-resolution: 350dpi), (min-resolution: 3dppx)'
 ) !default;
 
+// -----------------------------------------------------------------------------
+// Parser functions
+// -----------------------------------------------------------------------------
+
+// Find opererator if exist
+//
+// @param {String} $expression - Expression to extract operator from
+//
+// @return {String}
 @function get-expression-operator($expression) {
     @each $operator in ('>=', '>', '<=', '<') {
         @if str-index($expression, $operator) {
@@ -28,15 +39,33 @@ $media-expressions: (
     }
 }
 
+// Transform in media query language
+//
+// @param {String} $expression - Expression to extract operator from
+//
+// @return {String}
 @function get-expression-prefix($operator) {
     @return if(index(('<', '<='), $operator), 'max', 'min');
 }
 
+// Get dimenssion (default is 'width')
+//
+// @param {String} $expression - Expression to extract operator from
+// @param {String} $operator - Operator from `$expression`
+//
+// @return {String}
 @function get-expression-dimension($expression, $operator) {
-    $operator-index: str-index($expression, $operator);
-    $parsed-dimension: str-slice($expression, 0, $operator-index - 1);
+
+    // Define default dimension
     $dimension: 'width';
 
+    // Find operator position
+    $operator-index: str-index($expression, $operator);
+
+    // Extract dimension before operator position
+    $parsed-dimension: str-slice($expression, 0, $operator-index - 1);
+
+    // Redefined dimmension if needed
     @if str-length($parsed-dimension) > 0 {
         $dimension: $parsed-dimension;
     }
@@ -44,16 +73,29 @@ $media-expressions: (
     @return $dimension;
 }
 
+// Get value of expression
+//
+// @param {String} $expression - Expression to extract operator from
+// @param {String} $operator - Operator from `$expression`
+//
+// @return {String}
 @function get-expression-value($expression, $operator) {
+
+    // Find operator position
     $operator-index: str-index($expression, $operator);
+
+    // Extract value after operator position
     $value: str-slice($expression, $operator-index + str-length($operator));
 
+    // Convert value to number if it's custom values
+    // else use breakpoints list to get value
     @if map-has-key($breakpoints, $value) {
         $value: map-get($breakpoints, $value);
     } @else {
         $value: to-number($value);
     }
 
+    // Add/remove interval
     @if $operator == '>' {
         $value: $value + 1;
     } @else if $operator == '<' {
@@ -63,12 +105,19 @@ $media-expressions: (
     @return $value;
 }
 
+// Parse expression to build media querie expression
+//
+// @param {String} $expression - Expression to extract operator from
+//
+// @return {String}
 @function parse-expression($expression) {
 
+    // If expression is defined in $media-expressions, return it
     @if map-has-key($media-expressions, $expression) {
         @return map-get($media-expressions, $expression);
     }
 
+    // Else compute the expression
     $operator: get-expression-operator($expression);
     $dimension: get-expression-dimension($expression, $operator);
     $prefix: get-expression-prefix($operator);
@@ -77,6 +126,17 @@ $media-expressions: (
     @return '(#{$prefix}-#{$dimension}: #{$value})';
 }
 
+// -----------------------------------------------------------------------------
+// Utils fonctions
+// -----------------------------------------------------------------------------
+
+//
+// Casts a string into a number
+//
+// @param {String | Number} $value - Value to be parsed
+//
+// @return {Number}
+//
 @function to-number($value) {
     @if type-of($value) == 'number' {
         @return $value;
@@ -106,19 +166,33 @@ $media-expressions: (
         }
     }
 
-    @return if($minus, -$result, $result);;
+    @return if($minus, -$result, $result);
 }
 
+//
+// Add `$unit` to `$value`
+//
+// @param {Number} $value - Value to add unit to
+// @param {String} $unit - String representation of the unit
+//
+// @return {Number} - `$value` expressed in `$unit`
+//
 @function to-length($value, $unit) {
     $units: ('px': 1px, 'cm': 1cm, 'mm': 1mm, '%': 1%, 'ch': 1ch, 'pc': 1pc, 'in': 1in, 'em': 1em, 'rem': 1rem, 'pt': 1pt, 'ex': 1ex, 'vw': 1vw, 'vh': 1vh, 'vmin': 1vmin, 'vmax': 1vmax);
-
-    @if not index(map-keys($units), $unit) {
-        $_: log('Invalid unit `#{$unit}`.');
-    }
 
     @return $value * map-get($units, $unit);
 }
 
+//
+// Slice `$list` between `$start` and `$end` indexes
+//
+//
+// @param {List} $list - List to slice
+// @param {Number} $start [1] - Start index
+// @param {Number} $end [length($list)] - End index
+//
+// @return {List} Sliced list
+//
 @function slice($list, $start: 1, $end: length($list)) {
     @if length($list) < 1 or $start > $end {
         @return ();
@@ -132,6 +206,10 @@ $media-expressions: (
 
     @return $result;
 }
+
+// -----------------------------------------------------------------------------
+// Mixin
+// -----------------------------------------------------------------------------
 
 @mixin media($conditions...) {
     @if (length($conditions) == 0) {
